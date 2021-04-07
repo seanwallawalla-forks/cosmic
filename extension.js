@@ -255,6 +255,9 @@ function enable() {
     // Move workspace picker to left side (TODO: RTL)
     workspace_picker_direction(Main.overview._overview._controls, true);
 
+    // Transparent background for workspace switcher
+    Main.overview._overview._controls._thumbnailsBox.add_effect(new Shell.BlurEffect({sigma: 12, mode: 1}));
+
     // Hide search and modify background
     Main.overview._overview._searchEntry.hide();
     // This signal cannot be connected until Main.overview is initialized
