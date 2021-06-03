@@ -10,6 +10,21 @@ const SwitcherPopup = imports.ui.switcherPopup;
 const Util = imports.misc.util;
 const ViewSelector = imports.ui.viewSelector;
 
+const INTERFACE_XML =
+    '<node>\n' +
+    '  <interface name="com.system76.Cosmic">\n' +
+    '    <method name="OverviewShow"\n>' +
+    '        <arg name="kind" type="s" direction="in"/>\n' +
+    '    </method>/>\n' +
+    '    <method name="OverviewHide">\n' +
+    '        <arg name="kind" type="s" direction="in"/>\n' +
+    '    </method>/>\n' +
+    '    <method name="OverviewToggle">\n' +
+    '        <arg name="kind" type="s" direction="in"/>\n' +
+    '    </method>/>\n' +
+    '  </interface>\n' +
+    '</node>\n';
+
 let activities_signal_show = null;
 let appMenu_signal_show = null;
 let workspaces_button = null;
@@ -17,6 +32,7 @@ let applications_button = null;
 let search_signal_page_changed = null;
 let signal_overlay_key = null;
 let original_signal_overlay_key = null;
+let dbus_object = null;
 
 let injections = [];
 
@@ -46,6 +62,18 @@ var OVERVIEW_LAUNCHER = 2;
 const CLOCK_CENTER = 0;
 const CLOCK_LEFT = 1;
 const CLOCK_RIGHT = 2;
+
+function overview_kind_from_name(name) {
+    if (name == "workspaces") {
+        return OVERVIEW_WORKSPACES;
+    } else if (name == "applications") {
+        return OVERVIEW_APPLICATIONS;
+    } else if (name == "launcher") {
+        return OVERVIEW_LAUNCHER;
+    } else {
+        return null;
+    }
+}
 
 function overview_visible(kind) {
     if (kind == OVERVIEW_WORKSPACES) {
@@ -536,9 +564,19 @@ function enable() {
     settings.connect("changed::clock-alignment", () => {
         clock_alignment(settings.get_enum("clock-alignment"));
     });
+
+
+    dbus_object = Gio.DBusExportedObject.wrapJSObject(INTERFACE_XML, {
+        OverviewShow: kind => overview_show(overview_kind_from_name(kind)),
+        OverviewHide: kind => overview_hide(overview_kind_from_name(kind)),
+        OverviewToggle: kind => overview_toggle(overview_kind_from_name(kind)),
+    });
+    dbus_object.export(Gio.DBus.session, "/com/system76/Cosmic");
 }
 
 function disable() {
+    dbus_object.unexport();
+
     // Restore applications shortcut
     const SHELL_KEYBINDINGS_SCHEMA = 'org.gnome.shell.keybindings';
     Main.wm.removeKeybinding('toggle-application-view');
