@@ -14,6 +14,8 @@ var { OVERVIEW_WORKSPACES, OVERVIEW_APPLICATIONS, OVERVIEW_LAUNCHER } = extensio
 var { overview_visible, overview_show, overview_hide, overview_toggle } = extension.imports.overview;
 var { CosmicTopBarButton } = extension.imports.topBarButton;
 var { settings_new_schema } = extension.imports.settings;
+const Workspaces = extension.imports.workspaces;
+const CosmicPanel = extension.imports.panel;
 
 let activities_signal_show = null;
 let appMenu_signal_show = null;
@@ -218,6 +220,27 @@ function hide_overview_backgrounds() {
 
 function monitors_changed() {
     clock_alignment(settings.get_enum("clock-alignment"));
+
+    if (global.foobar === undefined) {
+        global.foobar = [];
+    }
+    let removed = global.foobar.splice(Main.layoutManager.monitors.length);
+    if (global.foobar[Main.layoutManager.primaryIndex] !== undefined) {
+        removed.push(global.foobar[Main.layoutManager.primaryIndex]);
+        delete global.foobar[Main.layoutManager.primaryIndex];
+    }
+    removed.forEach(x => {
+        x.overview._overview.destroy();
+        x.panel.destroy();
+    });
+    for (let i = 0; i < Main.layoutManager.monitors.length; i++) {
+        if (i != Main.layoutManager.primaryIndex && global.foobar[i] === undefined) {
+            const overview = new Workspaces.OverviewMonitor(i);
+            const panel = new CosmicPanel.PanelMonitor(i);
+            workspace_picker_direction(overview._overview._controls, true); // XXX
+            global.foobar[i] = {overview: overview, panel: panel};
+	}
+    }
 }
 
 function init(metadata) {}
@@ -506,6 +529,13 @@ function disable() {
         Main.layoutManager.disconnect(signal_monitors_changed);
         signal_monitors_changed = null;
     }
+
+    // TODO: revert workspace change
+    global.foobar.forEach(x => {
+        x.overview._overview.destroy();
+        x.panel.destroy();
+    });
+    delete global.foobar;
 
     // Restore applications shortcut
     const SHELL_KEYBINDINGS_SCHEMA = 'org.gnome.shell.keybindings';
