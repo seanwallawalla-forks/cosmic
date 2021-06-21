@@ -8,6 +8,7 @@ const OverviewControls = imports.ui.overviewControls;
 const SwitcherPopup = imports.ui.switcherPopup;
 const Util = imports.misc.util;
 const ViewSelector = imports.ui.viewSelector;
+const WindowPreview = imports.ui.WindowPreview;
 
 var { OVERVIEW_WORKSPACES, OVERVIEW_APPLICATIONS, OVERVIEW_LAUNCHER } = extension.imports.overview;
 var { overview_visible, overview_show, overview_hide, overview_toggle } = extension.imports.overview;
@@ -32,6 +33,8 @@ function inject(object, parameter, replacement) {
     });
     object[parameter] = replacement;
 }
+
+const WORKSPACES_WINDOW_ICON_INITIAL_SIZE = 64;
 
 const CLOCK_CENTER = 0;
 const CLOCK_LEFT = 1;
