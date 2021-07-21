@@ -12,7 +12,7 @@ var { overview_visible, overview_show, overview_hide, overview_toggle } = extens
 var { settings_new_schema } = extension.imports.settings;
 
 // could inject modification
-const PANEL_ITEM_IMPLEMENTATIONS = { ...Panel.PANEL_ITEM_IMPLEMENTATIONS, activities: undefined, appMenu: undefined, aggregateMenu: undefined };
+const PANEL_ITEM_IMPLEMENTATIONS = { ...Panel.PANEL_ITEM_IMPLEMENTATIONS, activities: undefined, appMenu: undefined };
 
 var PanelMonitor = GObject.registerClass({
 }, class PanelMonitor extends Panel.Panel {
