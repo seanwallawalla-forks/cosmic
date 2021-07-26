@@ -32,12 +32,18 @@ class OverviewMonitor extends Overview.Overview {
 
         this._shellInfo = new ShellInfo();
 
-        Main.layoutManager.connect('monitors-changed', this._relayout.bind(this));
+        this._monitorsChangedId = Main.layoutManager.connect('monitors-changed', this._relayout.bind(this));
         this._relayout();
+
+        this._overview.connect('destroy', this._onDestroy.bind(this));
 
         // XXX
         //this._showingId = Main.overview.connect('showing', this.show.bind(this));
         //this._hidingId = Main.overview.connect('hiding', this.hide.bind(this));
+    }
+
+    _onDestroy() {
+        Main.layoutManager.disconnect(this._monitorsChangedId);
     }
 
     _updateBackgrounds() {
@@ -125,8 +131,8 @@ class ControlsManagerMonitor extends OverviewControls.ControlsManager {
 
         this.viewSelector = new ViewSelector.ViewSelector(searchEntry,
             this._workspaceAdjustment, this.dash.showAppsButton);
-        this.viewSelector.connect('page-changed', this._setVisibility.bind(this));
-        this.viewSelector.connect('page-empty', this._onPageEmpty.bind(this));
+        this._pageChangedId = this.viewSelector.connect('page-changed', this._setVisibility.bind(this));
+        this._pageEmptyId = this.viewSelector.connect('page-empty', this._onPageEmpty.bind(this));
 
         this._group = new St.BoxLayout({ name: 'overview-group',
                                          x_expand: true, y_expand: true });
@@ -138,18 +144,9 @@ class ControlsManagerMonitor extends OverviewControls.ControlsManager {
         this._group.add_child(this.viewSelector);
         this._group.add_actor(this._thumbnailsSlider);
 
-        Main.overview.connect('showing', this._updateSpacerVisibility.bind(this));
+        //Main.overview.connect('showing', this._updateSpacerVisibility.bind(this));
 
         this.connect('destroy', this._onDestroy.bind(this));
-
-        this._pageChangedId = Main.overview.viewSelector.connect('page-changed', this._setVisibility.bind(this));
-        this._pageEmptyId = Main.overview.viewSelector.connect('page-empty', this._onPageEmpty.bind(this));
-        /*
-        this._pageChangedId = Main.overview.viewSelector.connect('page-changed', () => {
-            this.viewSelector._showPage(Main.overview.viewSelector._activePage)
-        });
-        this._pageEmptyId = Main.overview.viewSelector.connect('page-empty', this._onPageEmpty.bind(this));
-        */
 
         // Added
         /*
