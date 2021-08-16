@@ -16,10 +16,12 @@ const GNOME_VERSION = imports.misc.config.PACKAGE_VERSION;
 var { OVERVIEW_WORKSPACES, OVERVIEW_APPLICATIONS, OVERVIEW_LAUNCHER } = extension.imports.overview;
 var { overview_visible, overview_show, overview_hide, overview_toggle } = extension.imports.overview;
 var { CosmicTopBarButton } = extension.imports.topBarButton;
+var { CosmicPanel } = extension.imports.panel;
 var { settings_new_schema } = extension.imports.settings;
 
 let activities_signal_show = null;
 let appMenu_signal_show = null;
+let extra_panels = [];
 let workspaces_button = null;
 let applications_button = null;
 let search_signal_page_changed = null;
@@ -302,6 +304,17 @@ function page_empty() {
 
 function monitors_changed() {
     clock_alignment(settings.get_enum("clock-alignment"));
+
+    let removed = extra_panels.splice(Main.layoutManager.monitors.length);
+    if (extra_panels[Main.layoutManager.primaryIndex] != undefined) {
+        removed.push(extra_panels[Main.layoutManager.primaryIndex]);
+    }
+    removed.forEach(panel => panel.destroy());
+    for (let i = 0; i < Main.layoutManager.monitors.length; i++) {
+        if (i != Main.layoutManager.primaryIndex && extra_panels[i] === undefined) {
+            extra_panels[i] = new CosmicPanel(i);
+	}
+    }
 }
 
 function gnome_3_38_enable() {
@@ -602,6 +615,9 @@ function enable() {
 }
 
 function disable() {
+    extra_panels.forEach(panel => panel.destroy());
+    extra_panels = [];
+
     if (GNOME_VERSION.startsWith("3.38")) {
         gnome_3_38_disable();
     } else {

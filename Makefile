@@ -13,6 +13,7 @@ INSTALLNAME = $(UUID)
 SRC = extension.js \
       metadata.json \
       overview.js \
+      panel.js \
       prefs.js \
       schemas/gschemas.compiled \
       schemas/org.gnome.shell.extensions.pop-cosmic.gschema.xml \
