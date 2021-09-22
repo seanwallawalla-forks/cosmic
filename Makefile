@@ -10,7 +10,8 @@ INSTALLBASE = $(DESTDIR)/usr/share/gnome-shell/extensions
 endif
 INSTALLNAME = $(UUID)
 
-SRC = extension.js \
+SRC = applications.js \
+      extension.js \
       metadata.json \
       overview.js \
       prefs.js \
