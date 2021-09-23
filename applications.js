@@ -1,4 +1,6 @@
 const { AppDisplay } = imports.ui.appDisplay;
+const { ExtensionState } = imports.misc.extensionUtils;
+const Main = imports.ui.main;
 const { ModalDialog, State } = imports.ui.modalDialog;
 
 // XXX create on enable
@@ -6,7 +8,7 @@ const dialog = new ModalDialog({destroyOnClose: false, shellReactive: true});
 dialog.dialogLayout._dialog.style = "background-color: #36322f;";
 dialog.connect("key-press-event", (_, event) => {
     if (event.get_key_symbol() == 65307)
-        dialog.close();
+        hide();
 });
 
 const app_display = new AppDisplay();
@@ -23,4 +25,9 @@ function show() {
 
 function hide() {
     dialog.close();
+
+    const cosmicDock = Main.extensionManager.lookup("cosmic-dock@system76.com");
+    if (cosmicDock && cosmicDock.state === ExtensionState.ENABLED) {
+        cosmicDock.stateObj.dockManager._allDocks.forEach((dock) => dock._onOverviewHiding());
+    }
 }
