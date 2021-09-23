@@ -10,6 +10,14 @@ dialog.connect("key-press-event", (_, event) => {
     if (event.get_key_symbol() == 65307)
         hide();
 });
+const id = global.stage.connect('button-press-event', () => {
+    const [ width, height ] = dialog.dialogLayout._dialog.get_transformed_size();
+    const [ x, y ] = dialog.dialogLayout._dialog.get_transformed_position();
+    const [ cursor_x, cursor_y ] = global.get_pointer();
+
+    if (dialog.visible && (cursor_x < x || cursor_x > x + width || cursor_y < y || cursor_y > y + height))
+        hide();
+});
 
 const app_display = new AppDisplay();
 app_display.set_size(1000, 1000); // XXX
