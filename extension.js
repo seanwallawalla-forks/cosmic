@@ -13,6 +13,7 @@ const WorkspaceThumbnail = imports.ui.workspaceThumbnail;
 
 const GNOME_VERSION = imports.misc.config.PACKAGE_VERSION;
 
+var applications = extension.imports.applications;
 var { OVERVIEW_WORKSPACES, OVERVIEW_APPLICATIONS, OVERVIEW_LAUNCHER } = extension.imports.overview;
 var { overview_visible, overview_show, overview_hide, overview_toggle } = extension.imports.overview;
 var { CosmicTopBarButton } = extension.imports.topBarButton;
@@ -446,9 +447,13 @@ function gnome_40_enable() {
         }
         return Clutter.EVENT_PROPAGATE;
     });
+
+    applications.enable();
 }
 
-function gnome_40_disable() {}
+function gnome_40_disable() {
+    applications.disable();
+}
 
 function init(metadata) {}
 
