@@ -10,13 +10,16 @@ const { getTermsForSearchString } = imports.ui.searchController;
 
 let dialog = null;
 let button_press_id = null;
-let shop_provider = null;
+let searchEntry = null;
+let appDisplay = null;
+let resultsView = null;
+let inSearch = false;
 
 var CosmicSearchResultsView = GObject.registerClass({
     Signals: { 'terms-changed': {} },
 }, class CosmicSearchResultsView extends St.BoxLayout {
     _init() {
-	super._init();
+        super._init();
         this._content = new Search.MaxWidthBox({
             name: 'searchResultsContent',
             vertical: true,
@@ -25,16 +28,17 @@ var CosmicSearchResultsView = GObject.registerClass({
         this.add_actor(this._content);
         // TODO: scroll
 
-	this._cancellable = new Gio.Cancellable();
+        this._cancellable = new Gio.Cancellable();
 
         this._providers = [];
+        this._terms = [];
 
         const provider = new AppSearchProvider();
         //const providerDisplay = new Search.ListSearchResults(provider, this);
         const providerDisplay = new Search.GridSearchResults(provider, this);
         this._content.add(providerDisplay)
         provider.display = providerDisplay;
-	this._providers.push(provider);
+        this._providers.push(provider);
 
         const appInfo = Gio.DesktopAppInfo.new("io.elementary.appcenter.desktop");
         const busName = "io.elementary.appcenter";
@@ -46,30 +50,28 @@ var CosmicSearchResultsView = GObject.registerClass({
             provider.display = providerDisplay;
             this._providers.push(provider);
         }
-
-        this.emit('terms-changed'); // XXX
     }
 
     get terms() {
-        return ["chrome"]; // XXX
+        return this._terms;
     }
 
     setTerms(terms) {
-	// TODO
-	this._terms = terms;
+        // TODO
+        this._terms = terms;
         this.emit('terms-changed');
-	
+
         this._cancellable.cancel();
         this._cancellable.reset();
 
-	// TODO timer
+        // TODO timer
 
         this._providers.forEach(provider => {
             provider.searchInProgress = true;
         
             //let previousProviderResults = previousResults[provider.id];
             //if (this._isSubSearch && previousProviderResults) {
-	    if (false) { // XXX
+            if (false) { // XXX
                 provider.getSubsearchResultSet(previousProviderResults,
                                                this._terms,    
                                                results => {
@@ -87,18 +89,17 @@ var CosmicSearchResultsView = GObject.registerClass({
     }
 
     _gotResults(results, provider) {
-	global.log(results);
-	const display = provider.display;
+        const display = provider.display;
 
-	const terms = this._terms;
+        const terms = this._terms;
                                                  
         display.updateSearch(results, terms, () => {
             provider.searchInProgress = false;
             
             // XXX
         });
-	global.log(results);
-	// TODO
+        global.log(results);
+        // TODO
     }
 
     highlightTerms(description) {
@@ -106,41 +107,51 @@ var CosmicSearchResultsView = GObject.registerClass({
     }
 });
 
-/*
-        this._activePage.ease({
-            opacity: 255,
-            duration: OverviewControls.SIDE_CONTROLS_ANIMATION_TIME,
-            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-        });
-    }
+function fadeSearch(newInSearch) {
+    if (newInSearch == inSearch)
+        return;
 
-    _fadePageOut(page) {
-        let oldPage = page;
-        page.ease({
-            opacity: 0,
-            duration: OverviewControls.SIDE_CONTROLS_ANIMATION_TIME,
-            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-            onStopped: () => this._animateIn(oldPage),
-        });
-    }
-*/
+    inSearch = newInSearch;
+
+    let oldPage, newPage;
+    if (inSearch)
+        [oldPage, newPage] = [appDisplay, resultsView];
+    else
+        [oldPage, newPage] = [resultsView, appDisplay];
+
+    oldPage.ease({
+        opacity: 0,
+        duration: OverviewControls.SIDE_CONTROLS_ANIMATION_TIME,
+        mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+        //onStopped: () => this._animateIn(oldPage),
+    });
+
+    newPage.ease({
+        opacity: 255,
+        duration: OverviewControls.SIDE_CONTROLS_ANIMATION_TIME,
+        mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+    });
+}
 
 function enable() {
-    const searchEntry = new St.Entry({
+    searchEntry = new St.Entry({
         style_class: 'search-entry',
         hint_text: _('Type to search'),
         track_hover: true,
         can_focus: true,
     });
 
-    const appDisplay = new AppDisplay();
+    appDisplay = new AppDisplay();
     appDisplay.set_size(1000, 1000); // XXX
 
-    const resultsView = new CosmicSearchResultsView();
+    resultsView = new CosmicSearchResultsView();
+    resultsView.opacity = 0;
 
     searchEntry.clutter_text.connect('text-changed', () => {
         const terms = getTermsForSearchString(searchEntry.get_text());
         resultsView.setTerms(terms);
+
+        fadeSearch(searchEntry.get_text() !== '');
     });
 
     const stack = new Shell.Stack({});
@@ -170,7 +181,9 @@ function enable() {
 }
 
 function disable() {
-    shop_provider = null;
+    searchEntry = null;
+    appDisplay = null;
+    resultsView = null;
 
     global.stage.disconnect(button_press_id);
     button_press_id = null;
@@ -185,6 +198,7 @@ function visible() {
 
 function show() {
     dialog.open();
+    searchEntry.grab_key_focus();
 }
 
 function hide() {
