@@ -197,6 +197,7 @@ function visible() {
 }
 
 function show() {
+    searchEntry.set_text('');
     dialog.open();
     searchEntry.grab_key_focus();
 }
