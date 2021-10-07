@@ -1,15 +1,51 @@
-const { Clutter, Gio, Shell, St } = imports.gi;
-const { AppDisplay } = imports.ui.appDisplay;
+const { Clutter, Gio, GObject, Shell, St } = imports.gi;
+const { AppDisplay, AppSearchProvider } = imports.ui.appDisplay;
 const { ExtensionState } = imports.misc.extensionUtils;
 const Main = imports.ui.main;
 const { ModalDialog, State } = imports.ui.modalDialog;
 const OverviewControls = imports.ui.overviewControls;
 const { RemoteSearchProvider2 } = imports.ui.remoteSearch;
-const { Search } = imports.ui.search;
+const Search = imports.ui.search;
 
 let dialog = null;
 let button_press_id = null;
 let shop_provider = null;
+
+var CosmicSearchResultsView = GObject.registerClass({
+    Signals: { 'terms-changed': {} },
+}, class CosmicSearchResultsView extends St.BoxLayout {
+    _init() {
+	super._init();
+        this._content = new Search.MaxWidthBox({
+            name: 'searchResultsContent',
+            vertical: true,
+            x_expand: true,
+        });
+        this.add_actor(this._content);
+        // TODO: scroll
+
+        const appInfo = Gio.DesktopAppInfo.new("io.elementary.appcenter.desktop");
+        const busName = "io.elementary.appcenter";
+        const objectPath = "/io/elementary/appcenter/SearchProvider";
+        if (appInfo) {
+            const provider = new RemoteSearchProvider2(appInfo, busName, objectPath, true);
+            const providerDisplay = new Search.ListSearchResults(provider, this);
+            this._content.add(providerDisplay)
+            provider.display = providerDisplay;
+        }
+
+        const provider = new AppSearchProvider();
+        //const providerDisplay = new Search.ListSearchResults(provider, this);
+        const providerDisplay = new Search.GridSearchResults(provider, this);
+        this._content.add(providerDisplay)
+        provider.display = providerDisplay;
+
+        this.emit('terms-changed'); // XXX
+    }
+    get terms() {
+        return ["chrome"]; // XXX
+    }
+});
 
 /*
         this._activePage.ease({
@@ -41,22 +77,15 @@ function enable() {
     const appDisplay = new AppDisplay();
     appDisplay.set_size(1000, 1000); // XXX
 
-    const results = new St.BoxLayout({ vertical: true });
+    const resultsView = new CosmicSearchResultsView();
 
     const stack = new Shell.Stack({});
     stack.add_child(appDisplay);
-    stack.add_child(results);
+    stack.add_child(resultsView);
 
     const box = new St.BoxLayout({ vertical: true });
     box.add_child(searchEntry);
     box.add_child(stack);
-
-    const appInfo = Gio.DesktopAppInfo.new("io.elementary.appcenter.desktop");
-    const busName = "io.elementary.appcenter";
-    const objectPath = "/io/elementary/appcenter/SearchProvider";
-    if (appInfo) {
-        const provider = new RemoteSearchProvider2(appInfo, busName, objectPath, true);
-    }
 
     dialog = new ModalDialog({destroyOnClose: false, shellReactive: true});
     dialog.contentLayout.add(box);
