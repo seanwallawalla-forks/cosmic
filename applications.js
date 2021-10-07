@@ -6,6 +6,7 @@ const { ModalDialog, State } = imports.ui.modalDialog;
 const OverviewControls = imports.ui.overviewControls;
 const { RemoteSearchProvider2 } = imports.ui.remoteSearch;
 const Search = imports.ui.search;
+const { getTermsForSearchString } = imports.ui.searchController;
 
 let dialog = null;
 let button_press_id = null;
@@ -24,6 +25,17 @@ var CosmicSearchResultsView = GObject.registerClass({
         this.add_actor(this._content);
         // TODO: scroll
 
+	this._cancellable = new Gio.Cancellable();
+
+        this._providers = [];
+
+        const provider = new AppSearchProvider();
+        //const providerDisplay = new Search.ListSearchResults(provider, this);
+        const providerDisplay = new Search.GridSearchResults(provider, this);
+        this._content.add(providerDisplay)
+        provider.display = providerDisplay;
+	this._providers.push(provider);
+
         const appInfo = Gio.DesktopAppInfo.new("io.elementary.appcenter.desktop");
         const busName = "io.elementary.appcenter";
         const objectPath = "/io/elementary/appcenter/SearchProvider";
@@ -32,18 +44,65 @@ var CosmicSearchResultsView = GObject.registerClass({
             const providerDisplay = new Search.ListSearchResults(provider, this);
             this._content.add(providerDisplay)
             provider.display = providerDisplay;
+            this._providers.push(provider);
         }
-
-        const provider = new AppSearchProvider();
-        //const providerDisplay = new Search.ListSearchResults(provider, this);
-        const providerDisplay = new Search.GridSearchResults(provider, this);
-        this._content.add(providerDisplay)
-        provider.display = providerDisplay;
 
         this.emit('terms-changed'); // XXX
     }
+
     get terms() {
         return ["chrome"]; // XXX
+    }
+
+    setTerms(terms) {
+	// TODO
+	this._terms = terms;
+        this.emit('terms-changed');
+	
+        this._cancellable.cancel();
+        this._cancellable.reset();
+
+	// TODO timer
+
+        this._providers.forEach(provider => {
+            provider.searchInProgress = true;
+        
+            //let previousProviderResults = previousResults[provider.id];
+            //if (this._isSubSearch && previousProviderResults) {
+	    if (false) { // XXX
+                provider.getSubsearchResultSet(previousProviderResults,
+                                               this._terms,    
+                                               results => {
+                                                   this._gotResults(results, provider);
+                                               },
+                                               this._cancellable);
+            } else {
+                provider.getInitialResultSet(this._terms,
+                                             results => {
+                                                 this._gotResults(results, provider);
+                                             },
+                                             this._cancellable);
+            }
+        });
+    }
+
+    _gotResults(results, provider) {
+	global.log(results);
+	const display = provider.display;
+
+	const terms = this._terms;
+                                                 
+        display.updateSearch(results, terms, () => {
+            provider.searchInProgress = false;
+            
+            // XXX
+        });
+	global.log(results);
+	// TODO
+    }
+
+    highlightTerms(description) {
+        return ""; // TODO
     }
 });
 
@@ -78,6 +137,11 @@ function enable() {
     appDisplay.set_size(1000, 1000); // XXX
 
     const resultsView = new CosmicSearchResultsView();
+
+    searchEntry.clutter_text.connect('text-changed', () => {
+        const terms = getTermsForSearchString(searchEntry.get_text());
+        resultsView.setTerms(terms);
+    });
 
     const stack = new Shell.Stack({});
     stack.add_child(appDisplay);
