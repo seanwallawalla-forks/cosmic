@@ -1,5 +1,5 @@
 const { Clutter, Gio, GObject, Shell, St } = imports.gi;
-const { AppDisplay, AppSearchProvider } = imports.ui.appDisplay;
+const { AppDisplay, AppIcon, AppSearchProvider } = imports.ui.appDisplay;
 const { ExtensionState } = imports.misc.extensionUtils;
 const Main = imports.ui.main;
 const { ModalDialog, State } = imports.ui.modalDialog;
@@ -14,6 +14,53 @@ let searchEntry = null;
 let appDisplay = null;
 let resultsView = null;
 let inSearch = false;
+
+var CosmicAppDisplay = GObject.registerClass(
+class CosmicAppDisplay extends St.Widget {
+    _init() {
+        super._init({
+            layout_manager: new Clutter.BinLayout(),
+        });
+
+        this._redisplayWorkId = Main.initializeDeferredWork(this, this._redisplay.bind(this));
+
+        this._folderSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.app-folders' });
+        this._folderSettings.connect('changed::folder-children', () => {
+            Main.queueDeferredWork(this._redisplayWorkId);
+        });
+
+        Shell.AppSystem.get_default().connect('installed-changed', () => {
+            Main.queueDeferredWork(this._redisplayWorkId);
+        });
+
+        this._scrollView = new St.ScrollView({ hscrollbar_policy: St.PolicyType.NEVER, x_expand: true, overlay_scrollbars: true });
+        this._scrollView.set_policy(St.PolicyType.NEVER, St.PolicyType.AUTOMATIC);
+        this.add_actor(this._scrollView);
+
+        // TODO
+        const box = new St.Viewport({
+            layout_manager: new Clutter.FlowLayout({
+                orientation: Clutter.Orientation.HORIZONTAL,
+                homogeneous: true,
+            }),
+            x_expand: true,
+            y_expand: true
+        });
+        this._scrollView.add_actor(box);
+        Shell.AppSystem.get_default().get_installed().forEach(app => {
+            const app2 = Shell.AppSystem.get_default().lookup_app(app.get_id());
+            const icon = new AppIcon(app2);
+            //const icon = app2.create_icon_texture(128);
+            box.add_actor(icon);
+        });
+    }
+
+    _redisplay() {
+        // TODO
+    }
+});
+
+
 
 var CosmicSearchResultsView = GObject.registerClass({
     Signals: { 'terms-changed': {} },
@@ -134,6 +181,8 @@ function fadeSearch(newInSearch) {
 }
 
 function enable() {
+    global.log(Shell.AppSystem.get_default().get_installed());
+
     searchEntry = new St.Entry({
         style_class: 'search-entry',
         hint_text: _('Type to search'),
@@ -141,7 +190,8 @@ function enable() {
         can_focus: true,
     });
 
-    appDisplay = new AppDisplay();
+    //appDisplay = new AppDisplay();
+    appDisplay = new CosmicAppDisplay();
     appDisplay.set_size(1000, 1000); // XXX
 
     resultsView = new CosmicSearchResultsView();
